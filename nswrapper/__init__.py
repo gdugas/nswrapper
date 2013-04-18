@@ -17,23 +17,53 @@ class Snmp(object):
             m = "Unable to connect to host %s" % host
             raise self.ConnectionError(m)
     
-    def get(self, oids):
-        if not type(oids) == list and not type(oids) == tuple:
-            oids = (oids,)
-        
+    def prepare(self, *attrs):
         varlist = []
-        for oid in oids:
-            varlist.append(netsnmp.Varbind(oid))
-        varlist = netsnmp.VarList(*varlist)
+        for attr in attrs:
+            # attr is a varlist
+            if isinstance(attr, netsnmp.VarList):
+                varlist = varlist + attr.varbinds
+            
+            # attr is a list of oids or varbinds
+            elif type(attr) == list or type(attr) == tuple:
+                for oid in attr:
+                    if isinstance(oid, netsnmp.Varbind):
+                        varlist.append(oid)
+                    else:
+                        varlist.append(netsnmp.Varbind(oid))
+            
+            # attr is an oid or a varbind
+            else:
+                if isinstance(attr, netsnmp.Varbind):
+                    varlist.append(attr)
+                else:
+                    varlist.append(netsnmp.Varbind(attr))
         
+        return netsnmp.VarList(*varlist)
+    
+    def get(self, *oids):
+        varlist = self.prepare(oids)
         self.session.get(varlist)
-        
         for var in varlist:
             yield get_datatype(var)
     
+    def getbulk(self, offset, repeat, *oids):
+        varlist = self.prepare(oids)
+        self.session.getbulk(offset, repeat, varlist)
+        for var in varlist:
+            yield get_datatype(var)
     
-    def walk(self, oid):
-        varlist = netsnmp.VarList(netsnmp.Varbind(oid))
+    def getnext(self, *oids):
+        varlist = self.prepare(oids)
+        self.session.getnext(varlist)
+        for var in varlist:
+            yield get_datatype(var)
+    
+    def walk(self, *oids):
+        varlist = self.prepare(oids)
+        if len(varlist) > 1:
+            m = "Only one oid or varbind must be specified"
+            raise Exception(m)
         self.session.walk(varlist)
         for var in varlist:
             yield get_datatype(var)

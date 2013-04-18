@@ -8,8 +8,6 @@ class SnmpDataType(object):
     VALUE_TYPE = str
     VARBIND_TYPE = ''
     
-    class DoesNotExists(Exception):
-        pass
     
     def __init__(self, oid, value=None, iid=None):
         self.oid = oid
@@ -25,14 +23,14 @@ class SnmpDataType(object):
     def __unicode__(self):
         """Represent the unicode value
         """
-        return str(self.value)
+        return str(self.validate(self.value))
     
     def varbind_value(self):
         """
         Like __unicode__, but format result for the \
         netsnmp.Varbind.val property
         """
-        return str(self.value)
+        return self.__unicode__()
     
     def get_varbind(self):
         """ Convert the datatype to a netsnmp.Varbind object
@@ -105,7 +103,7 @@ class Null(SnmpDataType):
 class NoSuchInstance(SnmpDataType):
     def __init__(self, oid, *args, **kwargs):
         m = "oid %s does not exists" % oid
-        raise self.DoesNotExists(m)
+        raise OidDoesNotExists(m)
 
 
 TYPESMAP = {'OBJECTID': ObjectId,
@@ -130,7 +128,6 @@ def get_datatype(varbind):
         Cls = TYPESMAP[varbind.type]
         return Cls(varbind.tag,value=varbind.val,iid=varbind.iid)
     except KeyError:
-        m = "DataType %s does not exists" % varbind.type
-        raise OidDoesNotExists(m)
+        return SnmpDataType(varbind.tag,value=varbind.val,iid=varbind.iid)
     except:
         raise
