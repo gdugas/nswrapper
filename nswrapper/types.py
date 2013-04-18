@@ -20,6 +20,9 @@ class SnmpDataType(object):
         value = self.VALUE_TYPE(value) if not value == None else None
         return value
     
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+    
     def __unicode__(self):
         """Represent the unicode value
         """
